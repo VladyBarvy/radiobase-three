@@ -469,21 +469,21 @@ function showNotification(message, type = 'info') {
 }
 
 // Добавьте кнопку обновления в интерфейс
-function addRefreshButton() {
-    const sidebarHeader = document.querySelector('.sidebar .d-flex');
-    if (!sidebarHeader) return;
+// function addRefreshButton() {
+//     const sidebarHeader = document.querySelector('.sidebar .d-flex');
+//     if (!sidebarHeader) return;
     
-    // Проверяем, не добавлена ли уже кнопка
-    if (!document.getElementById('refresh-btn')) {
-        const refreshBtn = document.createElement('button');
-        refreshBtn.id = 'refresh-btn';
-        refreshBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
-        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-        refreshBtn.title = 'Обновить дерево';
-        refreshBtn.onclick = refreshComponentsTree;
-        sidebarHeader.appendChild(refreshBtn);
-    }
-}
+//     // Проверяем, не добавлена ли уже кнопка
+//     if (!document.getElementById('refresh-btn')) {
+//         const refreshBtn = document.createElement('button');
+//         refreshBtn.id = 'refresh-btn';
+//         refreshBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
+//         refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+//         refreshBtn.title = 'Обновить дерево';
+//         refreshBtn.onclick = refreshComponentsTree;
+//         sidebarHeader.appendChild(refreshBtn);
+//     }
+// }
 
 // Добавьте кнопку отладки
 // function addDebugButton() {
@@ -593,3 +593,5 @@ async function checkDatabaseState() {
       return false;
   }
 }
+
+

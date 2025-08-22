@@ -10,8 +10,8 @@ const isDev = process.argv.includes('--dev') || !app.isPackaged;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1300,
+    height: 900,
     show: false,
     webPreferences: {
       nodeIntegration: false,
