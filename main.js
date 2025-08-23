@@ -73,11 +73,25 @@ function registerIpcHandlers() {
     }
   });
 
+
+
+
   ipcMain.handle('get-components', (event, categoryId) => {
     try {
-      const result = dbWrapper.all('SELECT * FROM components WHERE category_id = ? ORDER BY name', [categoryId]);
-      console.log('Получены компоненты для категории', categoryId, ':', result.length);
-      return result;
+      const components = dbWrapper.all('SELECT * FROM components WHERE category_id = ? ORDER BY name', [categoryId]);
+      console.log('Получены компоненты для категории', categoryId, ':', components.length);
+
+      // Преобразуем параметры из JSON строки в объект для каждого компонента
+      components.forEach(component => {
+        try {
+          component.parameters = component.parameters ? JSON.parse(component.parameters) : {};
+        } catch (error) {
+          console.error('Ошибка парсинга параметров для компонента', component.id, ':', error);
+          component.parameters = {};
+        }
+      });
+
+      return components;
     } catch (error) {
       console.error('Ошибка получения компонентов:', error);
       return [];
@@ -86,35 +100,41 @@ function registerIpcHandlers() {
 
   ipcMain.handle('get-component', (event, componentId) => {
     try {
-      const result = dbWrapper.get('SELECT * FROM components WHERE id = ?', [componentId]);
-      console.log('Получен компонент', componentId, ':', result ? 'найден' : 'не найден');
-      return result;
+      const component = dbWrapper.get('SELECT * FROM components WHERE id = ?', [componentId]);
+
+      if (component) {
+        console.log('Компонент найден:', componentId);
+
+        // Преобразуем параметры из JSON строки в объект
+        try {
+          component.parameters = component.parameters ? JSON.parse(component.parameters) : {};
+        } catch (error) {
+          console.error('Ошибка парсинга параметров:', error);
+          component.parameters = {};
+        }
+
+        return component;
+      } else {
+        console.log('Компонент не найден:', componentId);
+        return null;
+      }
     } catch (error) {
       console.error('Ошибка получения компонента:', error);
       return null;
     }
   });
 
-  ipcMain.handle('add-category', (event, name) => {
-    try {
-      console.log('Добавление категории:', name);
-      const result = dbWrapper.run('INSERT INTO categories (name) VALUES (?)', [name]);
-      return { success: true, id: result.lastInsertRowid };
-    } catch (error) {
-      console.error('Ошибка добавления категории:', error);
-      return { success: false, error: error.message };
-    }
-  });
+
 
   ipcMain.handle('delete-category', (event, id) => {
     try {
       console.log('Удаление категории:', id);
       // Удаляем компоненты этой категории сначала
       dbWrapper.run('DELETE FROM components WHERE category_id = ?', [id]);
-      
+
       // Удаляем категорию
       dbWrapper.run('DELETE FROM categories WHERE id = ?', [id]);
-      
+
       return { success: true };
     } catch (error) {
       console.error('Ошибка удаления категории:', error);
@@ -122,27 +142,35 @@ function registerIpcHandlers() {
     }
   });
 
+
+
+
   ipcMain.handle('add-component', (event, component) => {
     try {
       console.log('Добавление компонента:', component);
-      
-      // Проверяем данные
+
+      // Проверяем обязательные данные
       if (!component.category_id || !component.name) {
         console.error('Невалидные данные компонента');
         return { success: false, error: 'Невалидные данные компонента' };
       }
-      
+
       const result = dbWrapper.run(
-        'INSERT INTO components (category_id, name, parameters) VALUES (?, ?, ?)',
-        [component.category_id, component.name, JSON.stringify(component.parameters || {})]
+        'INSERT INTO components (category_id, name, storage_cell, datasheet_url, parameters) VALUES (?, ?, ?, ?, ?)',
+        [
+          component.category_id,
+          component.name,
+          component.storage_cell || null,
+          component.datasheet_url || null,
+          JSON.stringify(component.parameters || {})
+        ]
       );
-      
+
       console.log('Компонент добавлен, ID:', result.lastInsertRowid, 'Изменений:', result.changes);
-      
-      // Проверяем, что компонент действительно добавлен
-      const checkComponent = dbWrapper.get('SELECT * FROM components WHERE id = ?', [result.lastInsertRowid]);
-      console.log('Проверка добавленного компонента:', checkComponent);
-      
+
+      // Явно сохраняем базу данных после изменения
+      dbWrapper.save();
+
       return { success: true, id: result.lastInsertRowid };
     } catch (error) {
       console.error('Ошибка добавления компонента:', error);
@@ -150,30 +178,54 @@ function registerIpcHandlers() {
     }
   });
 
+
+  ipcMain.handle('delete-component', (event, id) => {
+    try {
+      console.log('Удаление компонента:', id);
+      const result = dbWrapper.run('DELETE FROM components WHERE id = ?', [id]);
+
+      console.log('Компонент удален, изменений:', result.changes);
+
+      // Явно сохраняем базу данных после изменения
+      dbWrapper.save();
+
+      return { success: true, changes: result.changes };
+    } catch (error) {
+      console.error('Ошибка удаления компонента:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+
   ipcMain.handle('update-component', (event, component) => {
     try {
       console.log('Обновление компонента:', component);
-      dbWrapper.run(
-        'UPDATE components SET category_id = ?, name = ?, parameters = ? WHERE id = ?',
-        [component.category_id, component.name, JSON.stringify(component.parameters || {}), component.id]
+
+      const result = dbWrapper.run(
+        'UPDATE components SET category_id = ?, name = ?, storage_cell = ?, datasheet_url = ?, parameters = ? WHERE id = ?',
+        [
+          component.category_id,
+          component.name,
+          component.storage_cell || null,
+          component.datasheet_url || null,
+          JSON.stringify(component.parameters || {}),
+          component.id
+        ]
       );
-      return { success: true };
+
+      console.log('Компонент обновлен, изменений:', result.changes);
+
+      // Явно сохраняем базу данных после изменения
+      dbWrapper.save();
+
+      return { success: true, changes: result.changes };
     } catch (error) {
       console.error('Ошибка обновления компонента:', error);
       return { success: false, error: error.message };
     }
   });
 
-  ipcMain.handle('delete-component', (event, id) => {
-    try {
-      console.log('Удаление компонента:', id);
-      dbWrapper.run('DELETE FROM components WHERE id = ?', [id]);
-      return { success: true };
-    } catch (error) {
-      console.error('Ошибка удаления компонента:', error);
-      return { success: false, error: error.message };
-    }
-  });
+
 
   isIpcRegistered = true;
   console.log('IPC обработчики зарегистрированы');
@@ -193,15 +245,35 @@ ipcMain.handle('update-category', async (event, category) => {
   }
 });
 
+
+
+
+ipcMain.handle('add-category', (event, name) => {
+  try {
+    console.log('Добавление категории:', name);
+    const result = dbWrapper.run('INSERT INTO categories (name) VALUES (?)', [name]);
+
+    // Явно сохраняем базу данных после изменения
+    dbWrapper.save();
+
+    return { success: true, id: result.lastInsertRowid };
+  } catch (error) {
+    console.error('Ошибка добавления категории:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+
+
 ipcMain.handle('delete-category', async (event, id) => {
   try {
     console.log('Удаление категории:', id);
     // Удаляем компоненты этой категории сначала
     dbWrapper.run('DELETE FROM components WHERE category_id = ?', [id]);
-    
+
     // Удаляем категорию
     const result = dbWrapper.run('DELETE FROM categories WHERE id = ?', [id]);
-    
+
     return { success: true, changes: result.changes };
   } catch (error) {
     console.error('Ошибка удаления категории:', error);
@@ -229,6 +301,7 @@ app.whenReady().then(async () => {
   try {
     console.log('Инициализация приложения...');
     await initDatabase();
+
     registerIpcHandlers();
     createWindow();
 
@@ -253,9 +326,9 @@ app.on('window-all-closed', () => {
       console.error('Ошибка закрытия базы данных:', error);
     }
   }
-  
+
   removeIpcHandlers();
-  
+
   if (process.platform !== 'darwin') app.quit();
 });
 
@@ -268,3 +341,47 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Необработанный промис:', promise, 'причина:', reason);
 });
+
+
+function checkTableStructure() {
+  try {
+    const tableInfo = dbWrapper.all("PRAGMA table_info(components)");
+    console.log('Структура таблицы components:', tableInfo);
+
+    // Проверим наличие всех необходимых колонок
+    const requiredColumns = ['id', 'category_id', 'name', 'storage_cell', 'datasheet_url', 'parameters'];
+    const existingColumns = tableInfo.map(col => col.name);
+
+    console.log('Необходимые колонки:', requiredColumns);
+    console.log('Существующие колонки:', existingColumns);
+
+    // Проверим отсутствующие колонки
+    const missingColumns = requiredColumns.filter(col => !existingColumns.includes(col));
+    if (missingColumns.length > 0) {
+      console.error('Отсутствующие колонки:', missingColumns);
+    }
+  } catch (error) {
+    console.error('Ошибка проверки структуры таблицы:', error);
+  }
+}
+
+
+
+// function testDirectInsert() {
+//   try {
+//     console.log('Прямой тест вставки в базу...');
+
+//     const result = dbWrapper.run(
+//       'INSERT INTO components (category_id, name, storage_cell, datasheet_url, parameters) VALUES (?, ?, ?, ?, ?)',
+//       [1, 'TEST_DIRECT', 'A-1', 'http://test.com', '{"test":"value"}']
+//     );
+
+//     console.log('Прямая вставка результат:', result);
+
+//     // Проверим все записи
+//     const allComponents = dbWrapper.all('SELECT * FROM components');
+//     console.log('Все записи после прямой вставки:', allComponents);
+//   } catch (error) {
+//     console.error('Ошибка прямой вставки:', error);
+//   }
+// }

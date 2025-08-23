@@ -1,158 +1,3 @@
-// let currentCategoryId = null;
-// let currentComponentId = null;
-// let categories = [];
-// let components = [];
-
-// // Инициализация при загрузке
-// document.addEventListener('DOMContentLoaded', async () => {
-//     await loadCategories();
-//     await loadComponentsTree();
-//     addRefreshButton();
-//     addDebugButton();
-// });
-
-// // Загрузка категорий
-// async function loadCategories() {
-//     try {
-//         categories = await window.electronAPI.getCategories();
-//         populateCategoryDropdown();
-//     } catch (error) {
-//         console.error('Ошибка загрузки категорий:', error);
-//         showNotification('Ошибка загрузки категорий', 'danger');
-//     }
-// }
-
-// // Заполнить выпадающий список категорий
-// function populateCategoryDropdown(selectedId = null) {
-//     const select = document.getElementById('componentCategory');
-//     if (!select) {
-//         console.error('Элемент componentCategory не найден');
-//         return;
-//     }
-    
-//     select.innerHTML = '';
-    
-//     if (categories.length === 0) {
-//         const option = document.createElement('option');
-//         option.value = '';
-//         option.textContent = 'Нет категорий';
-//         select.appendChild(option);
-//         return;
-//     }
-    
-//     categories.forEach(category => {
-//         const option = document.createElement('option');
-//         option.value = category.id;
-//         option.textContent = category.name;
-//         if (selectedId === category.id) {
-//             option.selected = true;
-//         }
-//         select.appendChild(option);
-//     });
-    
-//     // Если не выбрана категория и есть категории, выбираем первую
-//     if (!selectedId && categories.length > 0) {
-//         select.value = categories[0].id;
-//     }
-// }
-
-// // Загрузка дерева компонентов
-// async function loadComponentsTree() {
-//     const treeContainer = document.getElementById('tree-container');
-//     if (!treeContainer) {
-//         console.error('Элемент tree-container не найден');
-//         return;
-//     }
-    
-//     treeContainer.innerHTML = '';
-
-//     if (categories.length === 0) {
-//         treeContainer.innerHTML = '<div class="text-muted">Нет категорий</div>';
-//         return;
-//     }
-
-//     categories.forEach(category => {
-//         const categoryDiv = document.createElement('div');
-//         categoryDiv.innerHTML = `
-//             <div class="tree-item" onclick="toggleCategory(${category.id})">
-//                 <i class="fas fa-folder tree-icon"></i>
-//                 <span>${category.name}</span>
-//                 <i class="fas fa-caret-down float-end"></i>
-//             </div>
-//             <div id="category-${category.id}" class="ms-3" style="display: none;">
-//                 <div class="text-muted small">Загрузка...</div>
-//             </div>
-//         `;
-//         treeContainer.appendChild(categoryDiv);
-//     });
-// }
-
-// // Переключение отображения категории
-// async function toggleCategory(categoryId) {
-//     const categoryContent = document.getElementById(`category-${categoryId}`);
-//     const categoryElement = document.querySelector(`[onclick="toggleCategory(${categoryId})"]`);
-    
-//     if (!categoryContent) return;
-    
-//     if (categoryContent.style.display === 'none') {
-//         // Загружаем компоненты категории
-//         try {
-//             components = await window.electronAPI.getComponents(categoryId);
-            
-//             categoryContent.innerHTML = '';
-//             if (components.length === 0) {
-//                 categoryContent.innerHTML = '<div class="text-muted small">Нет компонентов</div>';
-//             } else {
-//                 components.forEach(component => {
-//                     const componentDiv = document.createElement('div');
-//                     componentDiv.className = 'tree-item component-item';
-//                     componentDiv.dataset.id = component.id;
-//                     componentDiv.innerHTML = `
-//                         <i class="fas fa-microchip tree-icon"></i>
-//                         ${component.name}
-//                     `;
-//                     componentDiv.onclick = () => showComponent(component.id);
-//                     categoryContent.appendChild(componentDiv);
-//                 });
-//             }
-            
-//             categoryContent.style.display = 'block';
-//             currentCategoryId = categoryId;
-//         } catch (error) {
-//             console.error('Ошибка загрузки компонентов:', error);
-//             categoryContent.innerHTML = '<div class="text-danger small">Ошибка загрузки</div>';
-//         }
-//     } else {
-//         categoryContent.style.display = 'none';
-//         currentCategoryId = null;
-//     }
-// }
-
-// // Функция для обновления дерева компонентов
-// async function refreshComponentsTree() {
-//     console.log('Обновление дерева компонентов...');
-    
-//     // Перезагружаем категории
-//     await loadCategories();
-    
-//     // Если была открыта категория, переоткрываем ее
-//     if (currentCategoryId) {
-//         // Сначала скрываем все открытые категории
-//         document.querySelectorAll('[id^="category-"]').forEach(el => {
-//             el.style.display = 'none';
-//         });
-        
-//         // Затем открываем текущую категорию заново
-//         await toggleCategory(currentCategoryId);
-//     }
-    
-//     showNotification('Дерево компонентов обновлено', 'success');
-// }
-
-
-
-
-
 let currentCategoryId = null;
 let currentComponentId = null;
 let categories = [];
@@ -162,52 +7,32 @@ let components = [];
 document.addEventListener('DOMContentLoaded', async () => {
     await loadCategories();
     await loadComponentsTree();
-    addRefreshButton();
-    addTestButton();
+    // addRefreshButton();
+    // addTestButton();
     addContextMenuHandlers();
 
     addContextMenuHandlers(); // ← ЭТА СТРОКА ДОЛЖНА БЫТЬ
     console.log('Контекстное меню инициализировано');
 });
 
-// Добавляем обработчики контекстного меню
-// function addContextMenuHandlers() {
-//     document.addEventListener('contextmenu', function(e) {
-//         e.preventDefault();
-        
-//         // Проверяем, кликнули ли на категорию или компонент
-//         const categoryItem = e.target.closest('.category-item');
-//         const componentItem = e.target.closest('.component-item');
-        
-//         if (categoryItem) {
-//             showCategoryContextMenu(e, categoryItem);
-//         } else if (componentItem) {
-//             showComponentContextMenu(e, componentItem);
-//         }
-//     });
-    
-//     // Скрываем контекстное меню при клике в любое место
-//     document.addEventListener('click', function() {
-//         hideContextMenus();
-//     });
-// }
+
 
 
 function addContextMenuHandlers() {
-    document.addEventListener('contextmenu', function(e) {
+    document.addEventListener('contextmenu', function (e) {
         e.preventDefault();
-        
+
         console.log('=== ДЕБАГ КОНТЕКСТНОГО МЕНЮ ===');
         console.log('Цель клика:', e.target);
         console.log('Классы цели:', e.target.className);
         console.log('Родительские элементы:', e.target.closest('div'));
-        
+
         const categoryItem = e.target.closest('.category-item');
         const componentItem = e.target.closest('.component-item');
-        
+
         console.log('Найден category-item:', categoryItem);
         console.log('Найден component-item:', componentItem);
-        
+
         if (categoryItem) {
             console.log('Category ID данных:', categoryItem.dataset.id);
             showCategoryContextMenu(e, categoryItem);
@@ -218,8 +43,8 @@ function addContextMenuHandlers() {
             console.log('Не найдены элементы для контекстного меню');
         }
     });
-    
-    document.addEventListener('click', function() {
+
+    document.addEventListener('click', function () {
         hideContextMenus();
     });
 }
@@ -228,7 +53,7 @@ function addContextMenuHandlers() {
 // Показываем контекстное меню для категории
 function showCategoryContextMenu(event, categoryItem) {
     hideContextMenus();
-    
+
     const categoryId = categoryItem.dataset.id;
     const menu = document.createElement('div');
     menu.className = 'context-menu';
@@ -242,19 +67,19 @@ function showCategoryContextMenu(event, categoryItem) {
             </button>
         </div>
     `;
-    
+
     menu.style.position = 'absolute';
     menu.style.left = event.pageX + 'px';
     menu.style.top = event.pageY + 'px';
     menu.style.zIndex = '1000';
-    
+
     document.body.appendChild(menu);
 }
 
 // Показываем контекстное меню для компонента
 function showComponentContextMenu(event, componentItem) {
     hideContextMenus();
-    
+
     const componentId = componentItem.dataset.id;
     const menu = document.createElement('div');
     menu.className = 'context-menu';
@@ -268,12 +93,12 @@ function showComponentContextMenu(event, componentItem) {
             </button>
         </div>
     `;
-    
+
     menu.style.position = 'absolute';
     menu.style.left = event.pageX + 'px';
     menu.style.top = event.pageY + 'px';
     menu.style.zIndex = '1000';
-    
+
     document.body.appendChild(menu);
 }
 
@@ -300,9 +125,9 @@ function populateCategoryDropdown(selectedId = null) {
         console.error('Элемент componentCategory не найден');
         return;
     }
-    
+
     select.innerHTML = '';
-    
+
     if (categories.length === 0) {
         const option = document.createElement('option');
         option.value = '';
@@ -310,7 +135,7 @@ function populateCategoryDropdown(selectedId = null) {
         select.appendChild(option);
         return;
     }
-    
+
     categories.forEach(category => {
         const option = document.createElement('option');
         option.value = category.id;
@@ -320,7 +145,7 @@ function populateCategoryDropdown(selectedId = null) {
         }
         select.appendChild(option);
     });
-    
+
     if (!selectedId && categories.length > 0) {
         select.value = categories[0].id;
     }
@@ -333,7 +158,7 @@ async function loadComponentsTree() {
         console.error('Элемент tree-container не найден');
         return;
     }
-    
+
     treeContainer.innerHTML = '';
 
     if (categories.length === 0) {
@@ -367,13 +192,13 @@ async function editCategory(categoryId) {
             showNotification('Категория не найдена', 'warning');
             return;
         }
-        
+
         document.getElementById('editCategoryId').value = categoryId;
         document.getElementById('editCategoryName').value = category.name;
-        
+
         const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
         modal.show();
-        
+
         hideContextMenus();
     } catch (error) {
         console.error('Ошибка редактирования категории:', error);
@@ -385,12 +210,12 @@ async function editCategory(categoryId) {
 async function updateCategory() {
     const categoryId = document.getElementById('editCategoryId').value;
     const name = document.getElementById('editCategoryName').value.trim();
-    
+
     if (!name) {
         showNotification('Введите название категории', 'warning');
         return;
     }
-    
+
     try {
         // Здесь нужно добавить IPC вызов для обновления категории
         // Пока используем временное решение - пересоздаем категорию
@@ -398,7 +223,7 @@ async function updateCategory() {
         if (result.success) {
             // Удаляем старую категорию
             await window.electronAPI.deleteCategory(categoryId);
-            
+
             await refreshComponentsTree();
             bootstrap.Modal.getInstance(document.getElementById('editCategoryModal')).hide();
             showNotification('Категория успешно обновлена', 'success');
@@ -415,7 +240,7 @@ async function updateCategory() {
 async function deleteCategoryConfirm(categoryId) {
     const category = categories.find(c => c.id === categoryId);
     if (!category) return;
-    
+
     if (confirm(`Вы уверены, что хотите удалить категорию "${category.name}"? Все компоненты в этой категории также будут удалены.`)) {
         await deleteCategory(categoryId);
     }
@@ -442,7 +267,7 @@ async function deleteCategory(categoryId) {
 async function deleteComponentConfirm(componentId) {
     const component = components.find(c => c.id === componentId);
     if (!component) return;
-    
+
     if (confirm(`Вы уверены, что хотите удалить компонент "${component.name}"?`)) {
         await deleteComponent(componentId);
     }
@@ -455,7 +280,7 @@ async function deleteComponent(componentId) {
         const result = await window.electronAPI.deleteComponent(componentId);
         if (result.success) {
             await refreshComponentsTree();
-            
+
             // Если удаляли текущий компонент, очищаем просмотр
             if (componentId == currentComponentId) {
                 document.getElementById('component-view').innerHTML = `
@@ -466,7 +291,7 @@ async function deleteComponent(componentId) {
                 `;
                 currentComponentId = null;
             }
-            
+
             showNotification('Компонент успешно удален', 'success');
         } else {
             showNotification('Ошибка: ' + result.error, 'danger');
@@ -481,13 +306,13 @@ async function deleteComponent(componentId) {
 async function toggleCategory(categoryId) {
     const categoryContent = document.getElementById(`category-${categoryId}`);
     const categoryElement = document.querySelector(`.category-item[data-id="${categoryId}"]`);
-    
+
     if (!categoryContent) return;
-    
+
     if (categoryContent.style.display === 'none') {
         try {
             components = await window.electronAPI.getComponents(categoryId);
-            
+
             categoryContent.innerHTML = '';
             if (components.length === 0) {
                 categoryContent.innerHTML = '<div class="text-muted small">Нет компонентов</div>';
@@ -508,7 +333,7 @@ async function toggleCategory(categoryId) {
                     categoryContent.appendChild(componentDiv);
                 });
             }
-            
+
             categoryContent.style.display = 'block';
             currentCategoryId = categoryId;
         } catch (error) {
@@ -524,17 +349,17 @@ async function toggleCategory(categoryId) {
 // Функция для обновления дерева компонентов
 async function refreshComponentsTree() {
     console.log('Обновление дерева компонентов...');
-    
+
     await loadCategories();
-    
+
     if (currentCategoryId) {
         document.querySelectorAll('[id^="category-"]').forEach(el => {
             el.style.display = 'none';
         });
-        
+
         await toggleCategory(currentCategoryId);
     }
-    
+
     showNotification('Дерево компонентов обновлено', 'success');
 }
 
@@ -553,12 +378,13 @@ async function showComponent(componentId) {
             showNotification('Компонент не найден', 'warning');
             return;
         }
-        
+
         currentComponentId = componentId;
-        
-        const params = JSON.parse(component.parameters || '{}');
+
+        //const params = JSON.parse(component.parameters || '{}');
+        const params = getParametersObject(component.parameters);
         let paramsHtml = '';
-        
+
         for (const [key, value] of Object.entries(params)) {
             paramsHtml += `
                 <tr>
@@ -567,7 +393,28 @@ async function showComponent(componentId) {
                 </tr>
             `;
         }
-        
+
+
+        // Формируем HTML для новых полей
+        const storageCellHtml = component.storage_cell ? `
+                <tr>
+                    <td><strong>Ячейка хранения:</strong></td>
+                    <td>${component.storage_cell}</td>
+                </tr>
+            ` : '';
+
+        const datasheetHtml = component.datasheet_url ? `
+                <tr>
+                    <td><strong>Datasheet:</strong></td>
+                    <td>
+                        <a href="${component.datasheet_url}" target="_blank" class="text-decoration-none">
+                            <i class="fas fa-external-link-alt me-1"></i>
+                            Открыть datasheet
+                        </a>
+                    </td>
+                </tr>
+            ` : '';
+
         const componentView = document.getElementById('component-view');
         if (componentView) {
             componentView.innerHTML = `
@@ -617,16 +464,16 @@ async function addComponent() {
         showNotification('Сначала создайте категорию', 'warning');
         return;
     }
-    
+
     document.getElementById('componentModalTitle').textContent = 'Добавить компонент';
     document.getElementById('componentForm').reset();
     document.getElementById('componentId').value = '';
     document.getElementById('deleteBtn').style.display = 'none';
-    
+
     populateCategoryDropdown();
     clearParameters();
     addParameter(); // Добавляем пустое поле параметра
-    
+
     const modal = new bootstrap.Modal(document.getElementById('componentModal'));
     modal.show();
 }
@@ -639,24 +486,27 @@ async function editComponent(componentId) {
             showNotification('Компонент не найден', 'warning');
             return;
         }
-        
+
         document.getElementById('componentModalTitle').textContent = 'Редактировать компонент';
         document.getElementById('componentId').value = component.id;
         document.getElementById('componentName').value = component.name;
-        
+        document.getElementById('storageCell').value = component.storage_cell || '';
+        document.getElementById('datasheetUrl').value = component.datasheet_url || '';
+
         populateCategoryDropdown(component.category_id);
         document.getElementById('deleteBtn').style.display = 'block';
-        
+
         // Заполняем параметры
         clearParameters();
-        const params = JSON.parse(component.parameters || '{}');
+        //const params = JSON.parse(component.parameters || '{}');
+        const params = getParametersObject(component.parameters);
         for (const [key, value] of Object.entries(params)) {
             addParameter(key, value);
         }
         if (Object.keys(params).length === 0) {
             addParameter();
         }
-        
+
         const modal = new bootstrap.Modal(document.getElementById('componentModal'));
         modal.show();
     } catch (error) {
@@ -666,78 +516,95 @@ async function editComponent(componentId) {
 }
 
 // Сохранить компонент
+// Сохранить компонент
 async function saveComponent() {
-  const modal = document.getElementById('componentModal');
-  const saveButton = modal.querySelector('.btn-primary');
-  
-  // Блокируем кнопку чтобы предотвратить multiple clicks
-  saveButton.disabled = true;
-  saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
-  
-  try {
-      const formData = {
-          id: document.getElementById('componentId').value,
-          name: document.getElementById('componentName').value.trim(),
-          category_id: parseInt(document.getElementById('componentCategory').value),
-          parameters: {}
-      };
-      
-      if (!formData.name) {
-          showNotification('Введите название компонента', 'warning');
-          saveButton.disabled = false;
-          saveButton.innerHTML = 'Сохранить';
-          return;
-      }
-      
-      // Собираем параметры
-      const paramRows = document.querySelectorAll('.parameter-row');
-      paramRows.forEach(row => {
-          const nameInput = row.querySelector('input[name="paramName"]');
-          const valueInput = row.querySelector('input[name="paramValue"]');
-          const name = nameInput.value.trim();
-          const value = valueInput.value.trim();
-          
-          if (name && value) {
-              formData.parameters[name] = value;
-          }
-      });
-      
-      console.log('Данные для сохранения:', formData);
-      
-      let result;
-      if (formData.id) {
-          result = await window.electronAPI.updateComponent(formData);
-      } else {
-          result = await window.electronAPI.addComponent(formData);
-      }
-      
-      console.log('Результат сохранения:', result);
-      
-      if (result.success) {
-          // Закрываем модальное окно ПЕРЕД обновлением дерева
-          const modalInstance = bootstrap.Modal.getInstance(modal);
-          modalInstance.hide();
-          
-          // ОБНОВЛЯЕМ ДЕРЕВО КОМПОНЕНТОВ ПОСЛЕ СОХРАНЕНИЯ
-          await refreshComponentsTree();
-          
-          // Если редактировали текущий компонент, обновляем его отображение
-          if (formData.id && formData.id == currentComponentId) {
-              await showComponent(formData.id);
-          }
-          
-          showNotification('Компонент успешно сохранен!', 'success');
-      } else {
-          showNotification('Ошибка: ' + result.error, 'danger');
-      }
-  } catch (error) {
-      console.error('Ошибка сохранения компонента:', error);
-      showNotification('Ошибка сохранения компонента: ' + error.message, 'danger');
-  } finally {
-      // Всегда разблокируем кнопку
-      saveButton.disabled = false;
-      saveButton.innerHTML = 'Сохранить';
-  }
+    const modal = document.getElementById('componentModal');
+    const saveButton = modal.querySelector('.btn-primary');
+
+    // Блокируем кнопку чтобы предотвратить multiple clicks
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
+
+    try {
+        const formData = {
+            id: document.getElementById('componentId').value,
+            name: document.getElementById('componentName').value.trim(),
+            category_id: parseInt(document.getElementById('componentCategory').value),
+            storage_cell: document.getElementById('storageCell').value.trim(),
+            datasheet_url: document.getElementById('datasheetUrl').value.trim(),
+            parameters: {} // Будет заполнено ниже
+        };
+
+        if (!formData.name) {
+            showNotification('Введите название компонента', 'warning');
+            saveButton.disabled = false;
+            saveButton.innerHTML = 'Сохранить';
+            return;
+        }
+
+        if (!formData.category_id || isNaN(formData.category_id)) {
+            showNotification('Выберите категорию', 'warning');
+            saveButton.disabled = false;
+            saveButton.innerHTML = 'Сохранить';
+            return;
+        }
+
+        // Собираем параметры
+        const paramRows = document.querySelectorAll('.parameter-row');
+        paramRows.forEach(row => {
+            const nameInput = row.querySelector('input[name="paramName"]');
+            const valueInput = row.querySelector('input[name="paramValue"]');
+            const name = nameInput.value.trim();
+            const value = valueInput.value.trim();
+
+            if (name && value) {
+                formData.parameters[name] = value;
+            }
+        });
+
+        console.log('Данные для сохранения:', formData);
+
+        console.log('Данные для сохранения:', {
+            ...formData,
+            parameters: formData.parameters // Отдельно логируем параметры
+        });
+        
+
+
+        let result;
+        if (formData.id) {
+            result = await window.electronAPI.updateComponent(formData);
+        } else {
+            result = await window.electronAPI.addComponent(formData);
+        }
+
+        console.log('Результат сохранения:', result);
+
+        if (result.success) {
+            // Закрываем модальное окно ПЕРЕД обновлением дерева
+            const modalInstance = bootstrap.Modal.getInstance(modal);
+            modalInstance.hide();
+
+            // ОБНОВЛЯЕМ ДЕРЕВО КОМПОНЕНТОВ ПОСЛЕ СОХРАНЕНИЯ
+            await refreshComponentsTree();
+
+            // Если редактировали текущий компонент, обновляем его отображение
+            if (formData.id && formData.id == currentComponentId) {
+                await showComponent(formData.id);
+            }
+
+            showNotification('Компонент успешно сохранен!', 'success');
+        } else {
+            showNotification('Ошибка: ' + result.error, 'danger');
+        }
+    } catch (error) {
+        console.error('Ошибка сохранения компонента:', error);
+        showNotification('Ошибка сохранения компонента: ' + error.message, 'danger');
+    } finally {
+        // Всегда разблокируем кнопку
+        saveButton.disabled = false;
+        saveButton.innerHTML = 'Сохранить';
+    }
 }
 
 // Удалить текущий компонент
@@ -745,7 +612,7 @@ async function deleteCurrentComponent() {
     if (!confirm('Вы уверены, что хотите удалить этот компонент?')) {
         return;
     }
-    
+
     try {
         const result = await window.electronAPI.deleteComponent(currentComponentId);
         if (result.success) {
@@ -778,12 +645,12 @@ function addCategory() {
 // Сохранить категорию
 async function saveCategory() {
     const name = document.getElementById('categoryName').value.trim();
-    
+
     if (!name) {
         showNotification('Введите название категории', 'warning');
         return;
     }
-    
+
     try {
         const result = await window.electronAPI.addCategory(name);
         if (result.success) {
@@ -806,7 +673,7 @@ function addParameter(name = '', value = '') {
         console.error('Элемент parameters-container не найден');
         return;
     }
-    
+
     const div = document.createElement('div');
     div.className = 'parameter-row mb-2';
     div.innerHTML = `
@@ -844,7 +711,7 @@ function clearParameters() {
 function showNotification(message, type = 'info') {
     // Удаляем старые уведомления
     document.querySelectorAll('.alert-notification').forEach(el => el.remove());
-    
+
     // Создаем элемент уведомления
     const notification = document.createElement('div');
     notification.className = `alert alert-${type} alert-notification alert-dismissible fade show position-fixed`;
@@ -853,9 +720,9 @@ function showNotification(message, type = 'info') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     // Автоматически скрываем через 5 секунды
     setTimeout(() => {
         if (notification.parentNode) {
@@ -864,80 +731,26 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Добавьте кнопку обновления в интерфейс
-// function addRefreshButton() {
-//     const sidebarHeader = document.querySelector('.sidebar .d-flex');
-//     if (!sidebarHeader) return;
-    
-//     // Проверяем, не добавлена ли уже кнопка
-//     if (!document.getElementById('refresh-btn')) {
-//         const refreshBtn = document.createElement('button');
-//         refreshBtn.id = 'refresh-btn';
-//         refreshBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
-//         refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-//         refreshBtn.title = 'Обновить дерево';
-//         refreshBtn.onclick = refreshComponentsTree;
-//         sidebarHeader.appendChild(refreshBtn);
-//     }
-// }
 
 
 
 
-function addRefreshButton() {
-    // Измените селектор на что-то уникальное
-    const sidebarHeader = document.querySelector('.sidebar-header');
-    if (!sidebarHeader) {
-        console.log('Не найден sidebar-header');
-        return;
-    }
-    
-    // Создайте отдельный контейнер для кнопок
-    let buttonContainer = sidebarHeader.querySelector('.button-container');
-    if (!buttonContainer) {
-        buttonContainer = document.createElement('div');
-        buttonContainer.className = 'button-container d-flex gap-1 mb-2';
-        sidebarHeader.appendChild(buttonContainer);
-    }
-    
-    // Добавьте кнопку
-    const refreshBtn = document.createElement('button');
-    refreshBtn.className = 'btn btn-sm btn-outline-secondary';
-    refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-    refreshBtn.onclick = refreshComponentsTree;
-    buttonContainer.appendChild(refreshBtn);
-}
-
-
-
-// Добавьте кнопку отладки
-// function addDebugButton() {
-//     const sidebarHeader = document.querySelector('.sidebar .d-flex');
-//     if (!sidebarHeader) return;
-    
-//     const debugBtn = document.createElement('button');
-//     debugBtn.className = 'btn btn-sm btn-warning ms-2';
-//     debugBtn.innerHTML = '<i class="fas fa-bug"></i>';
-//     debugBtn.title = 'Отладка';
-//     debugBtn.onclick = debugCheckDatabase;
-//     sidebarHeader.appendChild(debugBtn);
-// }
 
 // Функция для отладки - проверяет состояние БД
 async function debugCheckDatabase() {
     try {
         console.log('=== ОТЛАДКА БАЗЫ ДАННЫХ ===');
-        
+
         // Проверяем категории
         const categories = await window.electronAPI.getCategories();
         console.log('Категории:', categories);
-        
+
         // Проверяем компоненты в каждой категории
         for (const category of categories) {
             const components = await window.electronAPI.getComponents(category.id);
             console.log(`Компоненты в категории "${category.name}":`, components);
         }
-        
+
         showNotification('Отладочная информация в консоли', 'info');
     } catch (error) {
         console.error('Ошибка отладки:', error);
@@ -946,80 +759,68 @@ async function debugCheckDatabase() {
 
 // Функция для тестирования добавления компонента
 async function testAddComponent() {
-  try {
-      const testComponent = {
-          category_id: 1,
-          name: 'TEST_COMPONENT_' + Date.now(),
-          parameters: { test: 'value', voltage: '12V' }
-      };
-      
-      console.log('Тестирование добавления компонента:', testComponent);
-      const result = await window.electronAPI.addComponent(testComponent);
-      console.log('Результат теста:', result);
-      
-      if (result.success) {
-          showNotification('Тест успешен! Компонент добавлен с ID: ' + result.id, 'success');
-          // Проверяем, что компонент действительно добавлен
-          const components = await window.electronAPI.getComponents(1);
-          console.log('Компоненты после добавления:', components);
-      } else {
-          showNotification('Тест failed: ' + result.error, 'danger');
-      }
-  } catch (error) {
-      console.error('Ошибка теста:', error);
-      showNotification('Ошибка теста: ' + error.message, 'danger');
-  }
+    try {
+        const testComponent = {
+            category_id: 1,
+            name: 'TEST_COMPONENT_' + Date.now(),
+            parameters: { test: 'value', voltage: '12V' }
+        };
+
+        console.log('Тестирование добавления компонента:', testComponent);
+        const result = await window.electronAPI.addComponent(testComponent);
+        console.log('Результат теста:', result);
+
+        if (result.success) {
+            showNotification('Тест успешен! Компонент добавлен с ID: ' + result.id, 'success');
+            // Проверяем, что компонент действительно добавлен
+            const components = await window.electronAPI.getComponents(1);
+            console.log('Компоненты после добавления:', components);
+        } else {
+            showNotification('Тест failed: ' + result.error, 'danger');
+        }
+    } catch (error) {
+        console.error('Ошибка теста:', error);
+        showNotification('Ошибка теста: ' + error.message, 'danger');
+    }
 }
 
-// Добавьте кнопку теста в интерфейс
-// function addTestButton() {
-//   const sidebarHeader = document.querySelector('.sidebar .d-flex');
-//   if (!sidebarHeader) return;
-  
-//   const testBtn = document.createElement('button');
-//   testBtn.className = 'btn btn-sm btn-info ms-2';
-//   testBtn.innerHTML = '<i class="fas fa-vial"></i>';
-//   testBtn.title = 'Тест БД';
-//   testBtn.onclick = testAddComponent;
-//   sidebarHeader.appendChild(testBtn);
-// }
 
 
 
-document.addEventListener('DOMContentLoaded', function() {
-  const modal = document.getElementById('componentModal');
-  if (modal) {
-      modal.addEventListener('hidden.bs.modal', function() {
-          // Очищаем форму после закрытия модального окна
-          document.getElementById('componentForm').reset();
-          clearParameters();
-          document.getElementById('deleteBtn').style.display = 'none';
-      });
-  }
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('componentModal');
+    if (modal) {
+        modal.addEventListener('hidden.bs.modal', function () {
+            // Очищаем форму после закрытия модального окна
+            document.getElementById('componentForm').reset();
+            clearParameters();
+            document.getElementById('deleteBtn').style.display = 'none';
+        });
+    }
 
-  addContextMenuHandlers(); // ← ЭТА СТРОКА ДОЛЖНА БЫТЬ
-  console.log('Контекстное меню инициализировано');
+    addContextMenuHandlers(); // ← ЭТА СТРОКА ДОЛЖНА БЫТЬ
+    console.log('Контекстное меню инициализировано');
 });
 
 async function checkDatabaseState() {
-  try {
-      console.log('=== ПРОВЕРКА СОСТОЯНИЯ БАЗЫ ДАННЫХ ===');
-      
-      // Проверяем категории
-      const categories = await window.electronAPI.getCategories();
-      console.log('Категории в БД:', categories);
-      
-      // Проверяем компоненты в каждой категории
-      for (const category of categories) {
-          const components = await window.electronAPI.getComponents(category.id);
-          console.log(`Компоненты в категории "${category.name}" (ID: ${category.id}):`, components);
-      }
-      
-      return true;
-  } catch (error) {
-      console.error('Ошибка проверки БД:', error);
-      return false;
-  }
+    try {
+        console.log('=== ПРОВЕРКА СОСТОЯНИЯ БАЗЫ ДАННЫХ ===');
+
+        // Проверяем категории
+        const categories = await window.electronAPI.getCategories();
+        console.log('Категории в БД:', categories);
+
+        // Проверяем компоненты в каждой категории
+        for (const category of categories) {
+            const components = await window.electronAPI.getComponents(category.id);
+            console.log(`Компоненты в категории "${category.name}" (ID: ${category.id}):`, components);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Ошибка проверки БД:', error);
+        return false;
+    }
 }
 
 
@@ -1068,3 +869,21 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Вспомогательная функция для безопасного получения объекта параметров
+function getParametersObject(parameters) {
+    if (typeof parameters === 'object' && parameters !== null) {
+        return parameters;
+    }
+    
+    if (typeof parameters === 'string' && parameters.trim() !== '') {
+        try {
+            return JSON.parse(parameters);
+        } catch (error) {
+            console.error('Ошибка парсинга параметров:', error);
+            return {};
+        }
+    }
+    
+    return {};
+}

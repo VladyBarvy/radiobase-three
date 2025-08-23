@@ -27,6 +27,9 @@ class DatabaseWrapper {
         const fileBuffer = fs.readFileSync(this.dbPath);
         const databaseData = new Uint8Array(fileBuffer);
         this.db = new SQL.Database(databaseData);
+        
+        // Миграция для существующей базы
+        await this.migrateDatabase();
       } else {
         console.log('Создаем новую базу данных');
         this.db = new SQL.Database();
@@ -57,6 +60,8 @@ class DatabaseWrapper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         category_id INTEGER NOT NULL,
         name TEXT NOT NULL,
+        storage_cell TEXT,          -- Ячейка хранения
+        datasheet_url TEXT,         -- Ссылка на datasheet
         parameters TEXT
       )
     `);
@@ -71,6 +76,73 @@ class DatabaseWrapper {
       this.save();
     } catch (error) {
       console.log('Начальные данные уже существуют или ошибка:', error.message);
+    }
+  }
+
+  async migrateDatabase() {
+    try {
+      console.log('Проверка миграции базы данных...');
+      
+      const columns = this.all("PRAGMA table_info(components)");
+      const columnNames = columns.map(col => col.name);
+      console.log('Существующие колонки:', columnNames);
+      
+      let needsMigration = false;
+      
+      if (!columnNames.includes('storage_cell')) {
+        console.log('Добавляем колонку storage_cell...');
+        this.run('ALTER TABLE components ADD COLUMN storage_cell TEXT');
+        console.log('Колонка storage_cell добавлена');
+        needsMigration = true;
+      }
+      
+      if (!columnNames.includes('datasheet_url')) {
+        console.log('Добавляем колонку datasheet_url...');
+        this.run('ALTER TABLE components ADD COLUMN datasheet_url TEXT');
+        console.log('Колонка datasheet_url добавлена');
+        needsMigration = true;
+      }
+      
+      // Сохраняем только если были изменения
+      if (needsMigration) {
+        this.save();
+        console.log('Миграция завершена, база данных сохранена');
+      } else {
+        console.log('Миграция не требуется');
+      }
+      
+      // Проверим итоговую структуру
+      const finalColumns = this.all("PRAGMA table_info(components)");
+      console.log('Финальная структура таблицы:', finalColumns.map(col => col.name));
+      
+    } catch (error) {
+      console.error('Ошибка миграции базы данных:', error);
+    }
+  }
+
+
+
+  checkTableStructure() {
+    try {
+      const tableInfo = this.all("PRAGMA table_info(components)");
+      console.log('Структура таблицы components:', tableInfo);
+      
+      const requiredColumns = ['id', 'category_id', 'name', 'storage_cell', 'datasheet_url', 'parameters'];
+      const existingColumns = tableInfo.map(col => col.name);
+      
+      console.log('Необходимые колонки:', requiredColumns);
+      console.log('Существующие колонки:', existingColumns);
+      
+      const missingColumns = requiredColumns.filter(col => !existingColumns.includes(col));
+      if (missingColumns.length > 0) {
+        console.error('Отсутствующие колонки:', missingColumns);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Ошибка проверки структуры таблицы:', error);
+      return false;
     }
   }
 
@@ -141,8 +213,9 @@ class DatabaseWrapper {
       
       console.log('SQL выполнен:', finalSql, 'Изменений:', changes, 'Последний ID:', lastInsertRowid);
       
-      // Сохраняем изменения
-      this.save();
+      // НЕ сохраняем здесь базу данных после каждого запроса!
+      // Сохранение будет вызываться вручную или при закрытии
+      // this.save(); // УБЕРИТЕ ЭТУ СТРОКУ
       
       return { changes, lastInsertRowid };
     } catch (error) {
