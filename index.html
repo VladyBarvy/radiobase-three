@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>База данных электронных компонентов</title>
+  <title>RadioBase - База данных электронных компонентов</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -113,6 +113,22 @@
     <div class="row">
       <!-- Левая панель - дерево каталогов -->
       <div class="col-md-3 sidebar p-3">
+
+
+        <!-- <div class="sidebar-header">
+          <h5 class="mb-2">Каталог компонентов</h5>
+          <div class="d-flex flex-wrap gap-1 mb-2">
+            <button class="btn btn-sm btn-success" onclick="addCategory()" title="Добавить категорию">
+              <i class="fas fa-folder-plus"></i>
+            </button>
+            <button class="btn btn-sm btn-primary" onclick="addComponent()" title="Добавить компонент">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+        </div> -->
+
+
+
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5>Каталог компонентов</h5>
           <div>
@@ -221,6 +237,33 @@
       </div>
     </div>
   </div>
+
+
+
+  <!-- Модальное окно для редактирования категории -->
+  <div class="modal fade" id="editCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Редактировать категорию</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editCategoryId">
+          <div class="mb-3">
+            <label for="editCategoryName" class="form-label">Название категории</label>
+            <input type="text" class="form-control" id="editCategoryName" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" onclick="deleteCategory()">Удалить</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" onclick="updateCategory()">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="renderer.js"></script>

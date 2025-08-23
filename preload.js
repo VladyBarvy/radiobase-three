@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Категории
   getCategories: () => ipcRenderer.invoke('get-categories'),
   addCategory: (name) => ipcRenderer.invoke('add-category', name),
+  updateCategory: (category) => ipcRenderer.invoke('update-category', category),
   deleteCategory: (id) => ipcRenderer.invoke('delete-category', id),
   
   // Компоненты
@@ -13,3 +14,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateComponent: (component) => ipcRenderer.invoke('update-component', component),
   deleteComponent: (id) => ipcRenderer.invoke('delete-component', id)
 });
+
+

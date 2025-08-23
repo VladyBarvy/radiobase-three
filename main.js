@@ -27,7 +27,7 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     if (isDev) {
-      mainWindow.webContents.openDevTools();
+      // mainWindow.webContents.openDevTools();
     }
   });
 
@@ -178,6 +178,36 @@ function registerIpcHandlers() {
   isIpcRegistered = true;
   console.log('IPC обработчики зарегистрированы');
 }
+
+ipcMain.handle('update-category', async (event, category) => {
+  try {
+    console.log('Обновление категории:', category);
+    const result = dbWrapper.run(
+      'UPDATE categories SET name = ? WHERE id = ?',
+      [category.name, category.id]
+    );
+    return { success: true, changes: result.changes };
+  } catch (error) {
+    console.error('Ошибка обновления категории:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('delete-category', async (event, id) => {
+  try {
+    console.log('Удаление категории:', id);
+    // Удаляем компоненты этой категории сначала
+    dbWrapper.run('DELETE FROM components WHERE category_id = ?', [id]);
+    
+    // Удаляем категорию
+    const result = dbWrapper.run('DELETE FROM categories WHERE id = ?', [id]);
+    
+    return { success: true, changes: result.changes };
+  } catch (error) {
+    console.error('Ошибка удаления категории:', error);
+    return { success: false, error: error.message };
+  }
+});
 
 // Функция для удаления IPC обработчиков
 function removeIpcHandlers() {
