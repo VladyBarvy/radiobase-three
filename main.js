@@ -37,12 +37,19 @@ function createWindow() {
   });
 }
 
+
+
+
 async function initDatabase() {
   try {
     console.log('Инициализация базы данных...');
     dbWrapper = new DatabaseWrapper();
     await dbWrapper.init();
     console.log('База данных успешно инициализирована');
+
+    // Проверяем и обновляем структуру таблицы
+    await checkTableStructure(); // Используйте await, если checkTableStructure возвращает промис
+
     return dbWrapper;
   } catch (error) {
     console.error('Критическая ошибка инициализации БД:', error);
@@ -98,6 +105,8 @@ function registerIpcHandlers() {
     }
   });
 
+
+
   ipcMain.handle('get-component', (event, componentId) => {
     try {
       const component = dbWrapper.get('SELECT * FROM components WHERE id = ?', [componentId]);
@@ -126,6 +135,11 @@ function registerIpcHandlers() {
 
 
 
+
+
+
+
+
   ipcMain.handle('delete-category', (event, id) => {
     try {
       console.log('Удаление категории:', id);
@@ -144,39 +158,42 @@ function registerIpcHandlers() {
 
 
 
-
   ipcMain.handle('add-component', (event, component) => {
     try {
       console.log('Добавление компонента:', component);
-
+  
       // Проверяем обязательные данные
       if (!component.category_id || !component.name) {
         console.error('Невалидные данные компонента');
         return { success: false, error: 'Невалидные данные компонента' };
       }
-
+  
       const result = dbWrapper.run(
-        'INSERT INTO components (category_id, name, storage_cell, datasheet_url, parameters) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO components (category_id, name, storage_cell, datasheet_url, quantity, updated_at, parameters, image_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
           component.category_id,
           component.name,
-          component.storage_cell || null,
-          component.datasheet_url || null,
-          JSON.stringify(component.parameters || {})
+          component.storage_cell,
+          component.datasheet_url,
+          component.quantity,
+          component.updated_at,
+          JSON.stringify(component.parameters || {}), // ← Сначала parameters
+          component.image_data || null              // ← Потом image_data
         ]
       );
-
-      console.log('Компонент добавлен, ID:', result.lastInsertRowid, 'Изменений:', result.changes);
-
-      // Явно сохраняем базу данных после изменения
+  
+      console.log('Компонент добавлен, ID:', result.lastInsertRowid);
+  
+      // Явно сохраняем базу данных
       dbWrapper.save();
-
+  
       return { success: true, id: result.lastInsertRowid };
     } catch (error) {
       console.error('Ошибка добавления компонента:', error);
       return { success: false, error: error.message };
     }
   });
+  
 
 
   ipcMain.handle('delete-component', (event, id) => {
@@ -197,33 +214,103 @@ function registerIpcHandlers() {
   });
 
 
-  ipcMain.handle('update-component', (event, component) => {
-    try {
-      console.log('Обновление компонента:', component);
+  // ipcMain.handle('update-component', (event, component) => {
+  //   try {
+  //     console.log('Обновление компонента:', component);
 
-      const result = dbWrapper.run(
-        'UPDATE components SET category_id = ?, name = ?, storage_cell = ?, datasheet_url = ?, parameters = ? WHERE id = ?',
-        [
-          component.category_id,
-          component.name,
-          component.storage_cell || null,
-          component.datasheet_url || null,
-          JSON.stringify(component.parameters || {}),
-          component.id
-        ]
-      );
+  //     const result = dbWrapper.run(
+  //       'UPDATE components SET category_id = ?, name = ?, storage_cell = ?, datasheet_url = ?, quantity = ?, updated_at = ?, parameters = ? WHERE id = ?',
+  //       [
+  //         component.category_id,
+  //         component.name,
+  //         component.storage_cell || null,
+  //         component.datasheet_url || null,
+  //         component.quantity,
+  //         component.updated_at, // Используем updated_at
+  //         JSON.stringify(component.parameters || {}),
+  //         component.id
+  //       ]
+  //     );
 
-      console.log('Компонент обновлен, изменений:', result.changes);
+  //     console.log('Компонент обновлен, изменений:', result.changes);
 
-      // Явно сохраняем базу данных после изменения
-      dbWrapper.save();
+  //     // Явно сохраняем базу данных после изменения
+  //     dbWrapper.save();
 
-      return { success: true, changes: result.changes };
-    } catch (error) {
-      console.error('Ошибка обновления компонента:', error);
-      return { success: false, error: error.message };
-    }
-  });
+  //     return { success: true, changes: result.changes };
+  //   } catch (error) {
+  //     console.error('Ошибка обновления компонента:', error);
+  //     return { success: false, error: error.message };
+  //   }
+  // });
+
+
+
+//   ipcMain.handle('update-component', (event, component) => {
+//     try {
+//         console.log('Обновление компонента:', component);
+
+//         const result = dbWrapper.run(
+//             'UPDATE components SET category_id = ?, name = ?, storage_cell = ?, datasheet_url = ?, quantity = ?, updated_at = ?, parameters = ?, image_data = ? WHERE id = ?',
+//             [
+//                 component.category_id,
+//                 component.name,
+//                 component.storage_cell || null,
+//                 component.datasheet_url || null,
+//                 component.quantity,
+//                 component.updated_at,
+//                 JSON.stringify(component.parameters || {}),
+//                 component.image_data || null, // Добавляем изображение
+//                 component.id
+//             ]
+//         );
+
+//         console.log('Компонент обновлен, изменений:', result.changes);
+//         dbWrapper.save();
+//         return { success: true, changes: result.changes };
+//     } catch (error) {
+//         console.error('Ошибка обновления компонента:', error);
+//         return { success: false, error: error.message };
+//     }
+// });
+
+
+
+
+
+
+ipcMain.handle('update-component', (event, component) => {
+  try {
+    console.log('Обновление компонента:', component);
+
+    // 🔍 Логируем image_data
+    console.log('image_data длина:', component.image_data ? component.image_data.length : 'null');
+
+    const result = dbWrapper.run(
+      'UPDATE components SET category_id = ?, name = ?, storage_cell = ?, datasheet_url = ?, quantity = ?, updated_at = ?, parameters = ?, image_data = ? WHERE id = ?',
+      [
+        component.category_id,
+        component.name,
+        component.storage_cell || null,
+        component.datasheet_url || null,
+        component.quantity,
+        component.updated_at,
+        JSON.stringify(component.parameters || {}),
+        component.image_data || null,
+        component.id
+      ]
+    );
+
+    console.log('Компонент обновлен, изменений:', result.changes);
+    dbWrapper.save();
+    return { success: true, changes: result.changes };
+  } catch (error) {
+    console.error('Ошибка обновления компонента:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+
 
 
 
@@ -281,12 +368,13 @@ ipcMain.handle('delete-category', async (event, id) => {
   }
 });
 
-// Функция для удаления IPC обработчиков
+
+
 function removeIpcHandlers() {
   const handlers = [
-    'get-categories', 'get-components', 'get-component',
+    'get-categories', 'get-components', 'get-component', // ← добавили get-component
     'add-category', 'delete-category', 'add-component',
-    'update-component', 'delete-component'
+    'update-component', 'delete-component', 'update-category' // ← и update-category тоже
   ];
 
   handlers.forEach(handler => {
@@ -296,6 +384,7 @@ function removeIpcHandlers() {
   isIpcRegistered = false;
   console.log('IPC обработчики удалены');
 }
+
 
 app.whenReady().then(async () => {
   try {
@@ -343,45 +432,107 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 
-function checkTableStructure() {
-  try {
-    const tableInfo = dbWrapper.all("PRAGMA table_info(components)");
-    console.log('Структура таблицы components:', tableInfo);
-
-    // Проверим наличие всех необходимых колонок
-    const requiredColumns = ['id', 'category_id', 'name', 'storage_cell', 'datasheet_url', 'parameters'];
-    const existingColumns = tableInfo.map(col => col.name);
-
-    console.log('Необходимые колонки:', requiredColumns);
-    console.log('Существующие колонки:', existingColumns);
-
-    // Проверим отсутствующие колонки
-    const missingColumns = requiredColumns.filter(col => !existingColumns.includes(col));
-    if (missingColumns.length > 0) {
-      console.error('Отсутствующие колонки:', missingColumns);
-    }
-  } catch (error) {
-    console.error('Ошибка проверки структуры таблицы:', error);
-  }
-}
 
 
-
-// function testDirectInsert() {
+// function checkTableStructure() {
 //   try {
-//     console.log('Прямой тест вставки в базу...');
+//       const tableInfo = dbWrapper.all("PRAGMA table_info(components)");
+//       console.log('Структура таблицы components:', tableInfo);
 
-//     const result = dbWrapper.run(
-//       'INSERT INTO components (category_id, name, storage_cell, datasheet_url, parameters) VALUES (?, ?, ?, ?, ?)',
-//       [1, 'TEST_DIRECT', 'A-1', 'http://test.com', '{"test":"value"}']
-//     );
+//       // Обновите список необходимых колонок
+//       const requiredColumns = ['id', 'category_id', 'name', 'storage_cell', 'datasheet_url', 'quantity', 'updated_at', 'parameters'];
+//       const existingColumns = tableInfo.map(col => col.name);
 
-//     console.log('Прямая вставка результат:', result);
+//       console.log('Необходимые колонки:', requiredColumns);
+//       console.log('Существующие колонки:', existingColumns);
 
-//     // Проверим все записи
-//     const allComponents = dbWrapper.all('SELECT * FROM components');
-//     console.log('Все записи после прямой вставки:', allComponents);
+//       const missingColumns = requiredColumns.filter(col => !existingColumns.includes(col));
+//       if (missingColumns.length > 0) {
+//           console.error('Отсутствующие колонки:', missingColumns);
+//           // Здесь можно добавить автоматическое создание отсутствующих колонок
+//           missingColumns.forEach(col => {
+//               if (col === 'updated_at') {
+//                   dbWrapper.run('ALTER TABLE components ADD COLUMN updated_at TEXT');
+//                   console.log('Добавлена колонка updated_at');
+//               }
+//           });
+//       }
 //   } catch (error) {
-//     console.error('Ошибка прямой вставки:', error);
+//       console.error('Ошибка проверки структуры таблицы:', error);
 //   }
 // }
+
+
+// function checkTableStructure() {
+//   try {
+//     const tableInfo = dbWrapper.all("PRAGMA table_info(components)");
+//     console.log('Структура таблицы components:', tableInfo);
+
+//     // Добавили image_data в список необходимых колонок
+//     const requiredColumns = [
+//       'id', 'category_id', 'name', 'storage_cell', 'datasheet_url',
+//       'quantity', 'updated_at', 'parameters', 'image_data'  // ← ДОБАВЛЕНО!
+//     ];
+//     const existingColumns = tableInfo.map(col => col.name);
+
+//     console.log('Существующие колонки:', existingColumns);
+
+//     const missingColumns = requiredColumns.filter(col => !existingColumns.includes(col));
+//     if (missingColumns.length > 0) {
+//       console.log('Добавляем отсутствующие колонки:', missingColumns);
+
+//       missingColumns.forEach(col => {
+//         if (col === 'updated_at') {
+//           dbWrapper.run('ALTER TABLE components ADD COLUMN updated_at TEXT');
+//           console.log('Добавлена колонка updated_at');
+//         }
+//         if (col === 'image_data') {
+//           dbWrapper.run('ALTER TABLE components ADD COLUMN image_data TEXT'); // или BLOB
+//           console.log('Добавлена колонка image_data');
+//         }
+//       });
+//     }
+//   } catch (error) {
+//     console.error('Ошибка проверки структуры таблицы:', error);
+//   }
+// }
+
+
+
+
+function checkTableStructure() {
+  try {
+  const tableInfo = dbWrapper.all("PRAGMA table_info(components)");
+  console.log('🔍 Структура таблицы components:', tableInfo); // ← ВАЖНО
+ 
+  const requiredColumns = [
+  'id', 'category_id', 'name', 'storage_cell', 'datasheet_url',
+  'quantity', 'updated_at', 'parameters', 'image_data'
+  ];
+ 
+  const existingColumns = tableInfo.map(col => col.name);
+  console.log('📌 Существующие колонки:', existingColumns);
+ 
+  const missingColumns = requiredColumns.filter(col => !existingColumns.includes(col));
+  if (missingColumns.length > 0) {
+  console.log('🔧 Добавляем колонки:', missingColumns);
+  missingColumns.forEach(col => {
+  if (col === 'updated_at') {
+  dbWrapper.run('ALTER TABLE components ADD COLUMN updated_at TEXT');
+  console.log('✅ Добавлена колонка updated_at');
+  }
+  if (col === 'image_data') {
+  dbWrapper.run('ALTER TABLE components ADD COLUMN image_data TEXT');
+  console.log('✅ Добавлена колонка image_data');
+  }
+  });
+  } else {
+  console.log('✅ Все колонки на месте, включая image_data');
+  }
+ 
+  } catch (error) {
+  console.error('❌ Ошибка проверки структуры таблицы:', error);
+  }
+ }
+
+ 

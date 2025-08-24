@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const { shell } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Категории
@@ -6,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addCategory: (name) => ipcRenderer.invoke('add-category', name),
   updateCategory: (category) => ipcRenderer.invoke('update-category', category),
   deleteCategory: (id) => ipcRenderer.invoke('delete-category', id),
+  openExternal: (url) => shell.openExternal(url),
   
   // Компоненты
   getComponents: (categoryId) => ipcRenderer.invoke('get-components', categoryId),

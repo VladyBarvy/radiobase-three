@@ -105,6 +105,35 @@
         transform: rotate(360deg);
       }
     }
+
+
+    /* Стили для изображений компонентов */
+.img-thumbnail {
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.img-thumbnail:hover {
+    transform: scale(1.05);
+}
+
+/* Улучшенное отображение модальных окон */
+.modal-content {
+    border-radius: 10px;
+}
+
+/* Адаптивность для изображений */
+@media (max-width: 768px) {
+    .img-fluid {
+        max-width: 200px !important;
+    }
+    
+    #imagePreview, #newImagePreview {
+        max-width: 150px !important;
+        max-height: 150px !important;
+    }
+}
+
   </style>
 </head>
 
@@ -217,6 +246,18 @@
                     placeholder="https://example.com/datasheet.pdf">
                 </div>
               </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="quantity" class="form-label">Количество</label>
+                  <input type="number" class="form-control" id="quantity" placeholder="Например: 0">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Дата последнего обновления:</label>
+                  <div id="updatedAtInfo" class="form-text text-muted">Не обновлялся</div>
+              </div>
+              </div>
             </div>
 
             <div class="mb-3">
@@ -242,6 +283,33 @@
                 <i class="fas fa-plus"></i> Добавить параметр
               </button>
             </div>
+
+<!-- Блок загрузки изображения -->
+<div class="mb-3">
+  <label class="form-label">Изображение компонента</label>
+  <div class="d-flex align-items-center gap-3">
+    <!-- Кнопка загрузки -->
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('componentImageInput').click()">
+      <i class="fas fa-upload"></i> Загрузить изображение
+    </button>
+
+    <!-- Прогноз -->
+    <div class="position-relative d-inline-block">
+      <img id="imagePreview" src="" alt="Preview" class="img-thumbnail" style="max-width: 120px; max-height: 120px; display: none;">
+      <button id="removeImageBtn" type="button" class="btn btn-sm btn-danger position-absolute" 
+              style="top: -10px; right: -10px; display: none; padding: 0.25rem 0.5rem;"
+              onclick="removeImage()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Скрытый input для файла -->
+  <input type="file" id="componentImageInput" accept="image/*" style="display: none;">
+</div>
+
+
+
           </form>
         </div>
         <div class="modal-footer">

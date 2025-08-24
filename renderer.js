@@ -3,16 +3,63 @@ let currentComponentId = null;
 let categories = [];
 let components = [];
 
+
+
+// Функции для показа уведомлений
+function showError(message) {
+    showNotification(message, 'danger');
+}
+
+function showSuccess(message) {
+    showNotification(message, 'success');
+}
+
+function showWarning(message) {
+    showNotification(message, 'warning');
+}
+
+function showInfo(message) {
+    showNotification(message, 'info');
+}
+
+
+
+async function convertImageToBase64(file) {
+    console.log('Конвертация файла:', file.name, file.type, file.size);
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            console.log('Файл успешно прочитан, длина:', reader.result.length);
+            resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', async () => {
     await loadCategories();
     await loadComponentsTree();
     // addRefreshButton();
     // addTestButton();
-    addContextMenuHandlers();
+    //addContextMenuHandlers();
 
     addContextMenuHandlers(); // ← ЭТА СТРОКА ДОЛЖНА БЫТЬ
     console.log('Контекстное меню инициализировано');
+
+
+    // Обработчик для ссылок datasheet
+    document.addEventListener('click', (event) => {
+        if (event.target.classList.contains('datasheet-link')) {
+            event.preventDefault();
+            const url = event.target.getAttribute('data-url');
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
+    });
 });
 
 
@@ -197,6 +244,7 @@ async function editCategory(categoryId) {
         document.getElementById('editCategoryName').value = category.name;
 
         const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+        //addImageUploadField(); // ✅ Добавьте эту строку
         modal.show();
 
         hideContextMenus();
@@ -370,18 +418,45 @@ async function refreshComponentsTree() {
 
 
 
-// Показать компонент
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////////--------------------------------------
+
 async function showComponent(componentId) {
     try {
         const component = await window.electronAPI.getComponent(componentId);
         if (!component) {
-            showNotification('Компонент не найден', 'warning');
+            showNotification('Компонент не найдена', 'warning');
             return;
         }
 
-        currentComponentId = componentId;
+        console.log('Полученный компонент:', component); // ← ДОБАВЬТЕ ЭТО
 
-        //const params = JSON.parse(component.parameters || '{}');
+
+
+        currentComponentId = componentId;
         const params = getParametersObject(component.parameters);
         let paramsHtml = '';
 
@@ -395,25 +470,53 @@ async function showComponent(componentId) {
         }
 
 
-        // Формируем HTML для новых полей
-        const storageCellHtml = component.storage_cell ? `
-                <tr>
-                    <td><strong>Ячейка хранения:</strong></td>
-                    <td>${component.storage_cell}</td>
-                </tr>
-            ` : '';
 
-        const datasheetHtml = component.datasheet_url ? `
-                <tr>
-                    <td><strong>Datasheet:</strong></td>
-                    <td>
-                        <a href="${component.datasheet_url}" target="_blank" class="text-decoration-none">
-                            <i class="fas fa-external-link-alt me-1"></i>
-                            Открыть datasheet
-                        </a>
-                    </td>
-                </tr>
-            ` : '';
+
+        console.log('Отображение компонента с изображением:', component.image_data ? 'exists' : 'null');
+
+
+
+        // Замените блок imageHtml на этот отладочный вариант:
+        const imageHtml = component.image_data ? `
+<div class="col-md-6">
+    <h6>Изображение компонента</h6>
+    <div class="text-center">
+        <img src="${component.image_data}" 
+             class="img-fluid rounded" 
+             style="max-width: 300px; max-height: 300px;"
+             alt="Изображение компонента ${component.name}"
+             onerror="console.error('Ошибка загрузки изображения:', this.src.substring(0, 100))">
+        <div class="mt-2">
+            <small class="text-muted">Длина данных: ${component.image_data.length} символов</small>
+            <br>
+            <button class="btn btn-outline-primary btn-sm mt-1" onclick="updateComponentImage(${component.id})">
+                <i class="fas fa-sync-alt"></i> Обновить изображение
+            </button>
+        </div>
+    </div>
+</div>
+` : `
+<div class="col-md-6">
+    <h6>Изображение компонента</h6>
+    <div class="text-center text-muted">
+        <i class="fas fa-image fa-3x mb-2"></i>
+        <p>Изображение отсутствует</p>
+        <button class="btn btn-primary btn-sm" onclick="updateComponentImage(${component.id})">
+            <i class="fas fa-plus"></i> Добавить изображение
+        </button>
+    </div>
+</div>
+`;
+
+
+
+
+
+
+        // Форматируем дату для отображения
+        const formattedDate = component.updated_at ?
+            new Date(component.updated_at).toLocaleString('ru-RU') :
+            'Не обновлялся';
 
         const componentView = document.getElementById('component-view');
         if (componentView) {
@@ -438,8 +541,32 @@ async function showComponent(componentId) {
                                         <td><strong>Категория:</strong></td>
                                         <td>${categories.find(c => c.id === component.category_id)?.name || 'Неизвестно'}</td>
                                     </tr>
+                                    <tr>
+                                        <td><strong>Ячейка хранения:</strong></td>
+                                        <td>${component.storage_cell}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Datasheet:</strong></td>
+                                        <td>
+                                            <a href="#" class="datasheet-link text-decoration-none" data-url="${component.datasheet_url}">
+                                                <i class="fas fa-file-pdf me-1"></i>
+                                                Открыть datasheet
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Количество:</strong></td>
+                                        <td>${component.quantity}</td>                            
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Дата обновления:</strong></td>
+                                        <td>${formattedDate}</td>                            
+                                    </tr>
                                 </table>
                             </div>
+
+                            ${imageHtml}
+
                         </div>
                         
                         <h6>Параметры</h6>
@@ -458,7 +585,26 @@ async function showComponent(componentId) {
     }
 }
 
-// Добавить компонент
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 async function addComponent() {
     if (!categories.length) {
         showNotification('Сначала создайте категорию', 'warning');
@@ -474,11 +620,123 @@ async function addComponent() {
     clearParameters();
     addParameter(); // Добавляем пустое поле параметра
 
+    // --- Исправлено: убрана ссылка на несуществующий `component` ---
+    // Просто сбрасываем изображение для нового компонента
+    addImageUploadField(); // Она сама сбросит preview и input
+
     const modal = new bootstrap.Modal(document.getElementById('componentModal'));
+   
     modal.show();
 }
 
-// Редактировать компонент
+
+
+
+// function addImageUploadField() {
+//     const imageContainer = document.getElementById('image-upload-container');
+
+
+
+//     const preview = document.getElementById('imagePreview');
+//     const removeBtn = document.getElementById('removeImageBtn');
+//     const imageInput = document.getElementById('componentImage');
+
+//     // Проверяем, существует ли элемент preview
+//     if (preview) {
+//         preview.style.display = 'none';
+//         preview.src = '';
+//     }
+
+//     // Проверяем, существует ли элемент removeBtn
+//     if (removeBtn) {
+//         removeBtn.style.display = 'none';
+//     }
+
+//     // Проверяем, существует ли элемент imageInput
+//     if (imageInput) {
+//         imageInput.value = '';
+//     }
+
+
+
+
+//     if (imageContainer) {
+//         imageContainer.innerHTML = `
+//             <div class="mb-3">
+//                 <label class="form-label">Изображение компонента</label>
+//                 <input type="file" id="componentImage" class="form-control" accept="image/*" onchange="previewImage(this)">
+//                 <div class="mt-2 text-center">
+//                     <img id="imagePreview" src="" style="max-width: 200px; max-height: 200px; display: none;" class="img-thumbnail">
+//                     <button type="button" id="removeImageBtn" class="btn btn-danger btn-sm mt-2" style="display: none;" onclick="removeImage()">
+//                         <i class="fas fa-times"></i> Удалить изображение
+//                     </button>
+//                 </div>
+//             </div>
+//         `;
+//     }
+// }
+
+function previewImage(input) {
+    const preview = document.getElementById('imagePreview');
+    const removeBtn = document.getElementById('removeImageBtn');
+
+    if (input.files && input.files[0]) {
+        if (!validateImage(input.files[0])) {
+            input.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            removeBtn.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+
+
+
+function removeImage() {
+    const preview = document.getElementById('imagePreview');
+    const removeBtn = document.getElementById('removeImageBtn');
+    const imageInput = document.getElementById('componentImage');
+
+    preview.style.display = 'none';
+    preview.src = '';
+    removeBtn.style.display = 'none';
+
+    if (imageInput) {
+        imageInput.value = '';
+    }
+
+    // Устанавливаем флаг, что изображение нужно удалить
+    document.getElementById('componentForm').dataset.removeImage = 'true';
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 async function editComponent(componentId) {
     try {
         const component = await window.electronAPI.getComponent(componentId);
@@ -487,125 +745,289 @@ async function editComponent(componentId) {
             return;
         }
 
-        document.getElementById('componentModalTitle').textContent = 'Редактировать компонент';
+        // Заполняем форму
         document.getElementById('componentId').value = component.id;
         document.getElementById('componentName').value = component.name;
-        document.getElementById('storageCell').value = component.storage_cell || '';
-        document.getElementById('datasheetUrl').value = component.datasheet_url || '';
+        document.getElementById('componentCategory').value = component.category_id;
+        document.getElementById('storageCell').value = component.storage_cell;
+        document.getElementById('datasheetUrl').value = component.datasheet_url;
+        document.getElementById('quantity').value = component.quantity;
 
-        populateCategoryDropdown(component.category_id);
-        document.getElementById('deleteBtn').style.display = 'block';
-
-        // Заполняем параметры
+        // Параметры
         clearParameters();
-        //const params = JSON.parse(component.parameters || '{}');
         const params = getParametersObject(component.parameters);
-        for (const [key, value] of Object.entries(params)) {
-            addParameter(key, value);
-        }
         if (Object.keys(params).length === 0) {
             addParameter();
+        } else {
+            for (const name in params) {
+                addParameter(name, params[name]);
+            }
         }
 
+        // --- Восстанавливаем изображение ---
+        const imagePreview = document.getElementById('imagePreview');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+
+        if (component.image_data) {
+            imagePreview.src = component.image_data;
+            imagePreview.style.display = 'block';
+            removeImageBtn.style.display = 'block';
+            removeImageBtn.dataset.removed = 'false';
+        } else {
+            imagePreview.style.display = 'none';
+            imagePreview.src = '';
+            removeImageBtn.style.display = 'none';
+            removeImageBtn.dataset.removed = 'false';
+        }
+
+        // --- Открываем модальное окно ---
+        document.getElementById('componentModalTitle').textContent = 'Редактировать компонент';
+        document.getElementById('deleteBtn').style.display = 'block';
+        document.getElementById('deleteBtn').onclick = () => deleteComponentConfirm(component.id);
+
         const modal = new bootstrap.Modal(document.getElementById('componentModal'));
+
+
+        addImageUploadField(); // ✅ Добавьте эту строку
+
+        // Если есть изображение — покажем
+        if (component.image_data) {
+            const imagePreview = document.getElementById('imagePreview');
+            const removeBtn = document.getElementById('removeImageBtn');
+            imagePreview.src = component.image_data;
+            imagePreview.style.display = 'block';
+            removeBtn.style.display = 'block';
+        }
+
         modal.show();
+
     } catch (error) {
         console.error('Ошибка редактирования компонента:', error);
-        showNotification('Ошибка загрузки компонента', 'danger');
+        showNotification('Ошибка редактирования', 'danger');
     }
 }
 
-// Сохранить компонент
-// Сохранить компонент
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// async function saveComponent() {
+//     const modal = document.getElementById('componentModal');
+//     const saveButton = modal.querySelector('.btn-primary');
+
+//     saveButton.disabled = true;
+//     saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
+
+//     try {
+//         // --- 1. Собираем параметры ---
+
+//         const paramRows = document.querySelectorAll('.parameter-row');
+//         const parameters = {};
+//         paramRows.forEach(row => {
+//             const nameInput = row.querySelector('input[name="paramName"]');  // ✅ Исправлено
+//             const valueInput = row.querySelector('input[name="paramValue"]'); // ✅ Исправлено
+//             const name = nameInput.value.trim();
+//             const value = valueInput.value.trim();
+//             if (name && value) {
+//                 parameters[name] = value;
+//             }
+//         });
+
+
+//         const removeBtn = document.getElementById('removeImageBtn');
+//         const shouldKeepImage = imagePreview && 
+//             imagePreview.src && 
+//             imagePreview.style.display !== 'none' && 
+//             (!removeBtn || removeBtn.dataset.removed !== 'true');
+
+
+
+
+//         let imageData = null;
+//         const imageInput = document.getElementById('componentImage');
+//         const imagePreview = document.getElementById('imagePreview');
+
+//         // Если новое изображение загружено
+//         if (imageInput && imageInput.files && imageInput.files.length > 0) {
+//             imageData = await convertImageToBase64(imageInput.files[0]);
+//         }
+//         // Если изображение уже было (редактирование), но не удаляли
+//         else if (imagePreview && imagePreview.src && imagePreview.style.display !== 'none' && !document.getElementById('removeImageBtn').dataset.removed) {
+//             imageData = imagePreview.src; // уже Base64
+//         }
+
+
+
+//         // Если пользователь нажал "удалить" — imageData остаётся null
+
+//         // --- 3. Собираем данные компонента ---
+//         const componentData = {
+//             id: document.getElementById('componentId').value || null,
+//             name: document.getElementById('componentName').value.trim(),
+//             category_id: parseInt(document.getElementById('componentCategory').value),
+//             storage_cell: document.getElementById('storageCell').value.trim(),
+//             datasheet_url: document.getElementById('datasheetUrl').value.trim(),
+//             // quantity: document.getElementById('quantity').value.trim(),
+//             quantity: parseInt(document.getElementById('quantity').value) || 0,
+//             parameters: parameters,
+//             image_data: imageData,
+//             updated_at: new Date().toISOString()
+//         };
+
+//         // --- 4. Валидация ---
+//         if (!componentData.name) {
+//             showNotification('Введите название компонента', 'warning');
+//             return;
+//         }
+
+//         if (!componentData.category_id || isNaN(componentData.category_id)) {
+//             showNotification('Выберите категорию', 'warning');
+//             return;
+//         }
+
+//         // --- 5. Сохранение ---
+//         // const result = componentData.id 
+//         // ? await window.electronAPI.updateComponent(componentData)
+//         // : await window.electronAPI.addComponent(componentData);
+
+//         const result = await window.electronAPI.saveComponent(componentData);
+
+//         if (result.success) {
+//             // Закрываем модальное окно
+//             bootstrap.Modal.getInstance(modal).hide();
+
+//             // Обновляем дерево
+//             await refreshComponentsTree();
+
+//             // Если это текущий компонент — обновляем просмотр
+//             if (componentData.id == currentComponentId) {
+//                 await showComponent(componentData.id);
+//             }
+
+//             showNotification('Компонент успешно сохранён!', 'success');
+//         } else {
+//             showNotification('Ошибка: ' + result.error, 'danger');
+//         }
+
+//     } catch (error) {
+//         console.error('Ошибка сохранения компонента:', error);
+//         showNotification('Ошибка сохранения: ' + error.message, 'danger');
+//     } finally {
+//         saveButton.disabled = false;
+//         saveButton.innerHTML = 'Сохранить';
+//     }
+// }
+
+
+
+
+
 async function saveComponent() {
     const modal = document.getElementById('componentModal');
     const saveButton = modal.querySelector('.btn-primary');
 
-    // Блокируем кнопку чтобы предотвратить multiple clicks
     saveButton.disabled = true;
     saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
 
     try {
-        const formData = {
-            id: document.getElementById('componentId').value,
-            name: document.getElementById('componentName').value.trim(),
-            category_id: parseInt(document.getElementById('componentCategory').value),
-            storage_cell: document.getElementById('storageCell').value.trim(),
-            datasheet_url: document.getElementById('datasheetUrl').value.trim(),
-            parameters: {} // Будет заполнено ниже
-        };
-
-        if (!formData.name) {
-            showNotification('Введите название компонента', 'warning');
-            saveButton.disabled = false;
-            saveButton.innerHTML = 'Сохранить';
-            return;
-        }
-
-        if (!formData.category_id || isNaN(formData.category_id)) {
-            showNotification('Выберите категорию', 'warning');
-            saveButton.disabled = false;
-            saveButton.innerHTML = 'Сохранить';
-            return;
-        }
-
-        // Собираем параметры
+        // --- 1. Параметры ---
         const paramRows = document.querySelectorAll('.parameter-row');
+        const parameters = {};
         paramRows.forEach(row => {
             const nameInput = row.querySelector('input[name="paramName"]');
             const valueInput = row.querySelector('input[name="paramValue"]');
             const name = nameInput.value.trim();
             const value = valueInput.value.trim();
-
             if (name && value) {
-                formData.parameters[name] = value;
+                parameters[name] = value;
             }
         });
 
-        console.log('Данные для сохранения:', formData);
+        // --- 2. Изображение ---
+        const imageInput = document.getElementById('componentImage');
+        const imagePreview = document.getElementById('imagePreview');
+        const removeBtn = document.getElementById('removeImageBtn');
 
-        console.log('Данные для сохранения:', {
-            ...formData,
-            parameters: formData.parameters // Отдельно логируем параметры
-        });
-        
+        let imageData = null;
 
+        // Новое изображение
+        if (imageInput && imageInput.files && imageInput.files.length > 0) {
+            imageData = await convertImageToBase64(imageInput.files[0]);
+        }
+        // Старое изображение и не удалено
+        else if (imagePreview && imagePreview.src && imagePreview.style.display !== 'none' && (!removeBtn || removeBtn.dataset.removed !== 'true')) {
+            imageData = imagePreview.src;
+        }
+        // Если удалено — imageData остаётся null
 
-        let result;
-        if (formData.id) {
-            result = await window.electronAPI.updateComponent(formData);
-        } else {
-            result = await window.electronAPI.addComponent(formData);
+        // --- 3. Данные компонента ---
+        const componentData = {
+            id: document.getElementById('componentId').value || null,
+            name: document.getElementById('componentName').value.trim(),
+            category_id: parseInt(document.getElementById('componentCategory').value),
+            storage_cell: document.getElementById('storageCell').value.trim(),
+            datasheet_url: document.getElementById('datasheetUrl').value.trim(),
+            quantity: parseInt(document.getElementById('quantity').value) || 0,
+            parameters: parameters,
+            image_data: imageData,
+            updated_at: new Date().toISOString()
+        };
+
+        // --- 4. Валидация ---
+        if (!componentData.name) {
+            showNotification('Введите название компонента', 'warning');
+            return;
+        }
+        if (!componentData.category_id || isNaN(componentData.category_id)) {
+            showNotification('Выберите категорию', 'warning');
+            return;
         }
 
-        console.log('Результат сохранения:', result);
+        // --- 5. Сохранение ---
+        const result = await window.electronAPI.saveComponent(componentData);
 
         if (result.success) {
-            // Закрываем модальное окно ПЕРЕД обновлением дерева
-            const modalInstance = bootstrap.Modal.getInstance(modal);
-            modalInstance.hide();
-
-            // ОБНОВЛЯЕМ ДЕРЕВО КОМПОНЕНТОВ ПОСЛЕ СОХРАНЕНИЯ
+            bootstrap.Modal.getInstance(modal).hide();
             await refreshComponentsTree();
-
-            // Если редактировали текущий компонент, обновляем его отображение
-            if (formData.id && formData.id == currentComponentId) {
-                await showComponent(formData.id);
+            if (componentData.id == currentComponentId) {
+                await showComponent(componentData.id);
             }
-
-            showNotification('Компонент успешно сохранен!', 'success');
+            showNotification('Компонент успешно сохранён!', 'success');
         } else {
             showNotification('Ошибка: ' + result.error, 'danger');
         }
+
     } catch (error) {
         console.error('Ошибка сохранения компонента:', error);
-        showNotification('Ошибка сохранения компонента: ' + error.message, 'danger');
+        showNotification('Ошибка: ' + error.message, 'danger');
     } finally {
-        // Всегда разблокируем кнопку
         saveButton.disabled = false;
         saveButton.innerHTML = 'Сохранить';
     }
 }
+
+
+
+
+
+
+
+
 
 // Удалить текущий компонент
 async function deleteCurrentComponent() {
@@ -875,7 +1297,7 @@ function getParametersObject(parameters) {
     if (typeof parameters === 'object' && parameters !== null) {
         return parameters;
     }
-    
+
     if (typeof parameters === 'string' && parameters.trim() !== '') {
         try {
             return JSON.parse(parameters);
@@ -884,6 +1306,222 @@ function getParametersObject(parameters) {
             return {};
         }
     }
-    
+
     return {};
 }
+
+
+
+
+async function updateComponentImage(componentId) {
+    try {
+        // Создаем модальное окно для загрузки изображения
+        const modalHtml = `
+            <div class="modal fade" id="imageModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Обновить изображение</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Выберите изображение</label>
+                                <input type="file" id="newComponentImage" class="form-control" accept="image/*" onchange="previewNewImage(this)">
+                                <div class="mt-2 text-center">
+                                    <img id="newImagePreview" src="" style="max-width: 200px; max-height: 200px; display: none;" class="img-thumbnail">
+                                    <button type="button" id="removeNewImageBtn" class="btn btn-danger btn-sm mt-2" style="display: none;" onclick="removeNewImage()">
+                                        <i class="fas fa-times"></i> Удалить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                            <button type="button" class="btn btn-primary" onclick="saveComponentImage(${componentId})">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Добавляем модальное окно в DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+        modal.show();
+
+        // Удаляем модальное окно при закрытии
+        document.getElementById('imageModal').addEventListener('hidden.bs.modal', function () {
+            this.remove();
+        });
+
+    } catch (error) {
+        console.error('Ошибка при открытии модального окна:', error);
+        showError('Не удалось открыть окно загрузки изображения');
+    }
+}
+
+function previewNewImage(input) {
+    const preview = document.getElementById('newImagePreview');
+    const removeBtn = document.getElementById('removeNewImageBtn');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            removeBtn.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removeNewImage() {
+    const input = document.getElementById('newComponentImage');
+    const preview = document.getElementById('newImagePreview');
+    const removeBtn = document.getElementById('removeNewImageBtn');
+
+    input.value = '';
+    preview.style.display = 'none';
+    removeBtn.style.display = 'none';
+    preview.src = '';
+}
+
+async function saveComponentImage(componentId) {
+    try {
+        const input = document.getElementById('newComponentImage');
+        let imageData = null;
+
+        if (input.files && input.files[0]) {
+            imageData = await convertImageToBase64(input.files[0]);
+        }
+
+        // Обновляем только изображение компонента
+        const result = await window.electronAPI.updateComponent({
+            id: componentId,
+            image_data: imageData
+        });
+
+        if (result.success) {
+            // Закрываем модальное окно
+            bootstrap.Modal.getInstance(document.getElementById('imageModal')).hide();
+
+            // Обновляем отображение компонента
+            showComponent(componentId);
+
+            showSuccess('Изображение успешно обновлено!');
+        } else {
+            showError('Ошибка при обновлении изображения: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при сохранении изображения:', error);
+        showError('Не удалось сохранить изображение');
+    }
+}
+
+function displayComponents(components) {
+    const tableBody = document.getElementById('componentsTableBody');
+
+    tableBody.innerHTML = components.map(component => {
+        // Создаем миниатюру изображения
+        const imageThumbnail = component.image_data ?
+            `<img src="${component.image_data}" 
+                  class="img-thumbnail" 
+                  style="width: 40px; height: 40px; object-fit: cover;"
+                  alt="${component.name}"
+                  title="Нажмите для просмотра"
+                  onclick="showComponent(${component.id})">` :
+            `<div class="text-center text-muted" style="width: 40px; height: 40px; line-height: 40px;">
+                <i class="fas fa-image"></i>
+            </div>`;
+
+        return `
+            <tr onclick="showComponent(${component.id})" style="cursor: pointer;">
+                <td>${imageThumbnail}</td>
+                <td>${component.name}</td>
+                <td>${component.category_name || 'Без категории'}</td>
+                <td>${component.storage_cell || 'Не указана'}</td>
+                <td>${component.quantity}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editComponent(${component.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteComponent(${component.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+
+function validateImage(file) {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+        showError('Пожалуйста, выберите изображение в формате JPEG, PNG, GIF или WebP');
+        return false;
+    }
+
+    if (file.size > maxSize) {
+        showError('Размер изображения не должен превышать 5MB');
+        return false;
+    }
+
+    return true;
+}
+
+
+
+function addImageUploadField() {
+    const imageInput = document.getElementById('componentImage');
+    const imagePreview = document.getElementById('imagePreview');
+    const removeBtn = document.getElementById('removeImageBtn');
+
+    if (!imageInput || !imagePreview || !removeBtn) {
+        console.error('❌ Элементы загрузки изображения не найдены');
+        return;
+    }
+
+    // Сброс
+    imageInput.value = '';
+    imagePreview.src = '';
+    imagePreview.style.display = 'none';
+    removeBtn.style.display = 'none';
+
+    // Обработчик изменения файла
+    imageInput.onchange = async function () {
+        if (this.files && this.files.length > 0) {
+            try {
+                const src = await convertImageToBase64(this.files[0]);
+                imagePreview.src = src;
+                imagePreview.style.display = 'block';
+                removeBtn.style.display = 'block';
+            } catch (error) {
+                console.error('❌ Ошибка загрузки изображения:', error);
+                showNotification('Ошибка загрузки изображения', 'danger');
+            }
+        }
+    };
+}
+
+
+function removeImage() {
+    const imageInput = document.getElementById('componentImage');
+    const imagePreview = document.getElementById('imagePreview');
+    const removeBtn = document.getElementById('removeImageBtn');
+
+    if (imageInput) imageInput.value = '';
+    if (imagePreview) {
+        imagePreview.src = '';
+        imagePreview.style.display = 'none';
+    }
+    if (removeBtn) removeBtn.style.display = 'none';
+
+    // Можно также добавить метку, что изображение удалено
+    removeBtn.dataset.removed = 'true';
+}
+
+
